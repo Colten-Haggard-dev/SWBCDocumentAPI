@@ -1,0 +1,6 @@
+@SWBCDocumentAPI_HostAddress = http://localhost:5269
+
+GET {{SWBCDocumentAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
