@@ -2,6 +2,7 @@
 
 public class Document
 {
-    public DateTime Date { get; set; }
-    public IFormFile? DocumentFile { get; set; }
+    public string Title { get; set; } = "default_doc";
+    public DateTime TimeStamp { get; set; }
+    public IFormFile File { get; set; }
 }
