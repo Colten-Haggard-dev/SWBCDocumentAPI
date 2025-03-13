@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "dgSpecHash": "VnTnCMwQ3tY=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Dom\\Documents\\cs_stuff\\SWBC_OCR\\TextractApi\\TextractApi.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Dom\\.nuget\\packages\\awssdk.core\\3.7.402.13\\awssdk.core.3.7.402.13.nupkg.sha512",
+    "C:\\Users\\Dom\\.nuget\\packages\\awssdk.s3\\3.7.415.12\\awssdk.s3.3.7.415.12.nupkg.sha512",
+    "C:\\Users\\Dom\\.nuget\\packages\\awssdk.textract\\3.7.400.107\\awssdk.textract.3.7.400.107.nupkg.sha512",
+    "C:\\Users\\Dom\\.nuget\\packages\\microsoft.aspnetcore.openapi\\8.0.8\\microsoft.aspnetcore.openapi.8.0.8.nupkg.sha512",
+    "C:\\Users\\Dom\\.nuget\\packages\\microsoft.extensions.apidescription.server\\6.0.5\\microsoft.extensions.apidescription.server.6.0.5.nupkg.sha512",
+    "C:\\Users\\Dom\\.nuget\\packages\\microsoft.openapi\\1.4.3\\microsoft.openapi.1.4.3.nupkg.sha512",
+    "C:\\Users\\Dom\\.nuget\\packages\\swashbuckle.aspnetcore\\6.4.0\\swashbuckle.aspnetcore.6.4.0.nupkg.sha512",
+    "C:\\Users\\Dom\\.nuget\\packages\\swashbuckle.aspnetcore.swagger\\6.4.0\\swashbuckle.aspnetcore.swagger.6.4.0.nupkg.sha512",
+    "C:\\Users\\Dom\\.nuget\\packages\\swashbuckle.aspnetcore.swaggergen\\6.4.0\\swashbuckle.aspnetcore.swaggergen.6.4.0.nupkg.sha512",
+    "C:\\Users\\Dom\\.nuget\\packages\\swashbuckle.aspnetcore.swaggerui\\6.4.0\\swashbuckle.aspnetcore.swaggerui.6.4.0.nupkg.sha512"
+  ],
+  "logs": []
+}
