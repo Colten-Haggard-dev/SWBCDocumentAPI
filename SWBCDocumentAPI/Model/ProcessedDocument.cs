@@ -6,5 +6,5 @@ public class ProcessedDocument
 {
     public string Title { get; set; } = "";
     public string RawText { get; set; } = "";
-    public DateTime TmeStamp { get; set; } = DateTime.Now;
+    public DateTime TimeStamp { get; set; } = DateTime.Now;
 }

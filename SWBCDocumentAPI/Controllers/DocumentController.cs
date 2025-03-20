@@ -21,23 +21,12 @@ public class DocumentController(ILogger<DocumentController> logger) : Controller
     private readonly ILogger<DocumentController> _logger = logger;
     private readonly HttpClient _httpClient = new();
 
-    [HttpPost("upload")]
+    [HttpPost("process")]
     public async Task<IActionResult> UploadFileAsync(UnprocessedDocument doc)
     {
         _httpClient.BaseAddress = new("https://localhost:7067/");
+
         MultipartFormDataContent form = [];
-
-        //var fileName = Path.GetFileName(doc.File.FileName);
-        //var filePath = Path.Combine(Path.GetTempPath(), fileName);
-
-        //// Save the file to a temporary location
-        //using (var stream = new FileStream(filePath, FileMode.Create))
-        //{
-        //    await doc.File.CopyToAsync(stream);
-        //}
-
-        //var fileStream = System.IO.File.Open(filePath, FileMode.Open);
-
         form.Add(new StreamContent(doc.File.OpenReadStream()), "file", doc.File.FileName);
 
         HttpResponseMessage uploadResponse = await _httpClient.PostAsync("api/Textract/upload", form);
