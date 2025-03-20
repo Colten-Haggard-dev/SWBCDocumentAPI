@@ -4,41 +4,68 @@ using Amazon.Textract;
 using Microsoft.AspNetCore.Mvc;
 using Amazon;
 using System;
+using SWBCDocumentAPI.Model;
+using System.Net;
+using System.Threading.Tasks;
+using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
+using System.Net.Http.Json;
+using System.Text;
 
 namespace SWBCDocumentAPI.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class DocumentController(ILogger<WeatherForecastController> logger) : ControllerBase
+public class DocumentController(ILogger<DocumentController> logger) : ControllerBase
 {
-    private readonly ILogger<WeatherForecastController> _logger = logger;
+    private readonly ILogger<DocumentController> _logger = logger;
+    private readonly HttpClient _httpClient = new();
 
-    [HttpPost]
-    public async Task<DetectDocumentTextResponse> UploadFileAsync(Model.Document doc)
+    [HttpPost("upload")]
+    public async Task<IActionResult> UploadFileAsync(UnprocessedDocument doc)
     {
-        DetectDocumentTextResponse detectResponse;
-        using (var textractClient = new AmazonTextractClient(RegionEndpoint.USEast1))
+        _httpClient.BaseAddress = new("https://localhost:7067/");
+        MultipartFormDataContent form = [];
+
+        //var fileName = Path.GetFileName(doc.File.FileName);
+        //var filePath = Path.Combine(Path.GetTempPath(), fileName);
+
+        //// Save the file to a temporary location
+        //using (var stream = new FileStream(filePath, FileMode.Create))
+        //{
+        //    await doc.File.CopyToAsync(stream);
+        //}
+
+        //var fileStream = System.IO.File.Open(filePath, FileMode.Open);
+
+        form.Add(new StreamContent(doc.File.OpenReadStream()), "file", doc.File.FileName);
+
+        HttpResponseMessage uploadResponse = await _httpClient.PostAsync("api/Textract/upload", form);
+
+        if (uploadResponse.StatusCode == HttpStatusCode.OK)
         {
-            Stream rstream = doc.File.OpenReadStream();
-            var bytes = new byte[doc.File.Length];
-            rstream.ReadExactly(bytes, 0, bytes.Length);
-            rstream.Close();
-
-            Console.WriteLine("Detect Document Text");
-            detectResponse = await textractClient.DetectDocumentTextAsync(new DetectDocumentTextRequest
-            {
-                Document = new Amazon.Textract.Model.Document
-                {
-                    Bytes = new MemoryStream(bytes)
-                }
-            });
-
-            foreach (var block in detectResponse.Blocks)
-            {
-                Console.WriteLine($"Type {block.BlockType}, Text: {block.Text}");
-            }
+            return await FinishProcessingDocument(doc.Title, doc.File.FileName);
         }
 
-        return detectResponse;
+        return BadRequest(uploadResponse.ReasonPhrase);
+    }
+
+    private async Task<IActionResult> FinishProcessingDocument(string title, string fileName)
+    {
+        string request = "api/Textract/detect?fileName=" + fileName;
+        HttpResponseMessage detectResponse = await _httpClient.GetAsync(request);
+
+        if (detectResponse.StatusCode != HttpStatusCode.OK)
+        {
+            return BadRequest(detectResponse.ReasonPhrase);
+        }
+
+        ProcessedDocument pdoc = new()
+        {
+            Title = title,
+            RawText = await detectResponse.Content.ReadAsStringAsync()
+        };
+
+        return Ok(pdoc);
     }
 }
