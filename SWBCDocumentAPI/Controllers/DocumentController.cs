@@ -21,6 +21,8 @@ public class DocumentController(ILogger<DocumentController> logger) : Controller
     private readonly ILogger<DocumentController> _logger = logger;
     private readonly HttpClient _httpClient = new();
 
+    private readonly Dictionary<Guid, ProcessedDocument> _documentJobs = [];
+
     [HttpPost("process")]
     public async Task<IActionResult> UploadFileAsync(UnprocessedDocument doc)
     {
@@ -33,20 +35,33 @@ public class DocumentController(ILogger<DocumentController> logger) : Controller
 
         if (uploadResponse.StatusCode == HttpStatusCode.OK)
         {
-            return await FinishProcessingDocument(doc.Title, doc.File.FileName);
+            Guid jobId = Guid.NewGuid();
+            FinishProcessingDocument(jobId, doc.Title, doc.File.FileName);
+            return Ok();
         }
 
         return BadRequest(uploadResponse.ReasonPhrase);
     }
 
-    private async Task<IActionResult> FinishProcessingDocument(string title, string fileName)
+    [HttpGet("getJob")]
+    public ProcessedDocument? GetJob(Guid jobId)
+    {
+        if (_documentJobs.TryGetValue(jobId, out var job))
+        {
+            return job;
+        }
+
+        return null;
+    }
+
+    private async void FinishProcessingDocument(Guid jobId, string title, string fileName)
     {
         string request = "api/Textract/detect?fileName=" + fileName;
         HttpResponseMessage detectResponse = await _httpClient.GetAsync(request);
 
         if (detectResponse.StatusCode != HttpStatusCode.OK)
         {
-            return BadRequest(detectResponse.ReasonPhrase);
+            return;
         }
 
         ProcessedDocument pdoc = new()
@@ -55,6 +70,6 @@ public class DocumentController(ILogger<DocumentController> logger) : Controller
             RawText = await detectResponse.Content.ReadAsStringAsync()
         };
 
-        return Ok(pdoc);
+        _documentJobs[jobId] = pdoc;
     }
 }
