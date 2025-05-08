@@ -11,6 +11,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using System.Net.Http.Json;
 using System.Text;
+using System.Diagnostics.Contracts;
 
 namespace SWBCDocumentAPI.Controllers;
 
@@ -19,77 +20,108 @@ namespace SWBCDocumentAPI.Controllers;
 /// </summary>
 [Route("api/[controller]")]
 [ApiController]
-public class DocumentController(ILogger<DocumentController> logger) : ControllerBase
+public class DocumentController : ControllerBase
 {
-    private readonly ILogger<DocumentController> _logger = logger;
-    private readonly HttpClient _httpClient = new();
+    private readonly ILogger<DocumentController> _logger;
+    private readonly HttpClient _httpClient;
 
-    private readonly Dictionary<Guid, ProcessedDocument> _documentJobs = [];
+    public DocumentController(ILogger<DocumentController> logger)
+    {
+        _logger = logger;
+        _httpClient = new()
+        {
+            BaseAddress = new("https://localhost:7067/")
+        };
+    }
 
     /// <summary>
     /// Uses the "process" route as a post request to allow a client to upload an <seealso cref="UnprocessedDocument"/> and then have it processed by the OCR API.
     /// </summary>
     /// <param name="doc">The <seealso cref="UnprocessedDocument"/> the client uploads.</param>
-    /// <returns>If file upload is successful, a <seealso cref="Guid"/> (jobID) is returned with Ok, elsewise a BadRequest is returned.</returns>
+    /// <returns>If file upload is successful, a <seealso cref="Guid"/> (jobID) is returned with Ok with the jobId of the , elsewise a BadRequest is returned.</returns>
     [HttpPost("process")]
     public async Task<IActionResult> ProcessDocumentAsync(UnprocessedDocument doc)
     {
-        _httpClient.BaseAddress = new("https://localhost:7067/");
+        HttpResponseMessage upload = UploadDocument(doc);
 
+        if (!upload.IsSuccessStatusCode)
+            return BadRequest(upload.Content);
+
+        HttpResponseMessage detect = StartDetection(doc);
+
+        if (!detect.IsSuccessStatusCode)
+            return BadRequest(upload.Content);
+
+        string jobId = await detect.Content.ReadAsStringAsync();
+
+        return Ok(jobId);
+    }
+
+    /// <summary>
+    /// Uses the "getProcessedDocument" route as a get request to allow a client to get a processed document
+    /// from the TextractOCR API
+    /// </summary>
+    /// <param name="jobId">The ID of a job in TextractOCR, this is used to retrieved a processed document</param>
+    /// <returns>A processed document formatted in HTML</returns>
+    [HttpGet("getProcessedDocument")]
+    public async Task<IActionResult> GetProcessedDocument(string jobId)
+    {
+        HttpResponseMessage check = CheckDetection(jobId);
+        HTMLDocument doc = new HTMLDocumentDetected();
+
+        if (!check.IsSuccessStatusCode)
+            return BadRequest(check.Content);
+
+        List<Block>? blocks = (await check.Content.ReadFromJsonAsync<GetDocumentTextDetectionResponse>())?.Blocks;
+        if (blocks == null)
+            return BadRequest("No blocks found");
+
+        doc.TextractToHTML(blocks);
+
+        return Ok(doc);
+    }
+
+    /// <summary>
+    /// A helper function to upload documents to the Textract API
+    /// </summary>
+    /// <param name="doc">The document and its info to upload</param>
+    /// <returns>The upload response</returns>
+    private HttpResponseMessage UploadDocument(UnprocessedDocument doc)
+    {
         MultipartFormDataContent form = [];
         form.Add(new StreamContent(doc.File.OpenReadStream()), "file", doc.File.FileName);
 
-        HttpResponseMessage uploadResponse = await _httpClient.PostAsync("api/Textract/upload", form);
+        Task<HttpResponseMessage> uploadResponse = _httpClient.PostAsync("api/Textract/upload", form);
+        uploadResponse.Wait();
 
-        if (uploadResponse.StatusCode == HttpStatusCode.OK)
-        {
-            Guid jobId = Guid.NewGuid();
-            FinishProcessingDocument(jobId, doc.Title, doc.File.FileName);
-            return Ok(jobId);
-        }
-
-        return BadRequest(uploadResponse.ReasonPhrase);
+        return uploadResponse.Result;
     }
 
     /// <summary>
-    /// Uses the "getJob" route as a get request to allow a client to get their document back as a <seealso cref="ProcessedDocument"/>.
-    /// It is expected that a client will call this regularly as it waits for their document to complete processing.
+    /// A helper function to begin document detection on the TextractOCR
     /// </summary>
-    /// <param name="jobId">The <seealso cref="Guid"/> of a document process job.</param>
-    /// <returns>If successful, returns a <seealso cref="ProcessedDocument"/> containing the information of their processed document, elsewise a <seealso cref="null"/> is returned.</returns>
-    [HttpGet("getJob")]
-    public ProcessedDocument? GetJob(Guid jobId)
+    /// <param name="doc">The document that is to be processed</param>
+    /// <returns>The begin detection response</returns>
+    private HttpResponseMessage StartDetection(UnprocessedDocument doc)
     {
-        if (_documentJobs.TryGetValue(jobId, out var job))
-        {
-            return job;
-        }
+        string request = "api/Textract/beginDetect?fileName=" + doc.File.FileName;
+        Task<HttpResponseMessage> detectResponse =  _httpClient.GetAsync(request);
+        detectResponse.Wait();
 
-        return null;
+        return detectResponse.Result;
     }
 
     /// <summary>
-    /// A helper function that calls the OCR API to process the uploaded document.
+    /// A helper function to check if a document has finished being processed on the TextractOCR API
     /// </summary>
-    /// <param name="jobId">The <seealso cref="Guid"/> to be used as a job ID in the <c>_documentJobs</c>.</param>
-    /// <param name="title">The title of the document.</param>
-    /// <param name="fileName">The file name of the document.</param>
-    private async void FinishProcessingDocument(Guid jobId, string title, string fileName)
+    /// <param name="jobId">The ID of the job the caller wants to check</param>
+    /// <returns>The check response</returns>
+    private HttpResponseMessage CheckDetection(string jobId)
     {
-        string request = "api/Textract/detect?fileName=" + fileName;
-        HttpResponseMessage detectResponse = await _httpClient.GetAsync(request);
+        string request = "api/Textract/checkDetect?jobId=" + jobId;
+        Task<HttpResponseMessage> checkResponse = _httpClient.GetAsync(request);
+        checkResponse.Wait();
 
-        if (detectResponse.StatusCode != HttpStatusCode.OK)
-        {
-            return;
-        }
-
-        ProcessedDocument pdoc = new()
-        {
-            Title = title,
-            RawText = await detectResponse.Content.ReadAsStringAsync()
-        };
-
-        _documentJobs[jobId] = pdoc;
+        return checkResponse.Result;
     }
 }

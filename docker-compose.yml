@@ -1,0 +1,15 @@
+services:
+  swbcdocumentapi:
+    image: ${DOCKER_REGISTRY-}swbcdocumentapi
+    build:
+      context: .
+      dockerfile: SWBCDocumentAPI/Dockerfile
+
+  swbctextractocr:
+    image: ${DOCKER_REGISTRY-}swbctextractocr
+    volumes:
+      - ${USERPROFILE}/.aws/:/root/.aws/credentials:ro
+    build:
+      context: .
+      dockerfile: SWBCTextractOCR/Dockerfile
+
