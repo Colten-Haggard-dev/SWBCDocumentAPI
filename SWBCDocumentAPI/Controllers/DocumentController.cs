@@ -38,7 +38,7 @@ public class DocumentController : ControllerBase
     /// Uses the "process" route as a post request to allow a client to upload an <seealso cref="UnprocessedDocument"/> and then have it processed by the OCR API.
     /// </summary>
     /// <param name="doc">The <seealso cref="UnprocessedDocument"/> the client uploads.</param>
-    /// <returns>If file upload is successful, a <seealso cref="Guid"/> (jobID) is returned with Ok with the jobId of the , elsewise a BadRequest is returned.</returns>
+    /// <returns>If file upload is successful Ok is returned with the jobId of the detection job, elsewise a BadRequest is returned.</returns>
     [HttpPost("process")]
     public async Task<IActionResult> ProcessDocumentAsync(UnprocessedDocument doc)
     {
