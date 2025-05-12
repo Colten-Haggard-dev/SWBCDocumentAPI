@@ -15,6 +15,12 @@ using System.Diagnostics.Contracts;
 
 namespace SWBCDocumentAPI.Controllers;
 
+public static class ProcessMethods
+{
+    public const string ANALYZE = "ANALYZE";
+    public const string DETECT = "DETECT";
+}
+
 /// <summary>
 /// <c>DocumentController</c> is the controller that allows HTTP requests to be handled for Documents (<seealso cref="UnprocessedDocument"/> and <seealso cref="ProcessedDocument"/>).
 /// </summary>
@@ -30,7 +36,7 @@ public class DocumentController : ControllerBase
         _logger = logger;
         _httpClient = new()
         {
-            BaseAddress = new("https://localhost:7067/")
+            BaseAddress = new("https://localhost:32770/")
         };
     }
 
@@ -40,14 +46,20 @@ public class DocumentController : ControllerBase
     /// <param name="doc">The <seealso cref="UnprocessedDocument"/> the client uploads.</param>
     /// <returns>If file upload is successful Ok is returned with the jobId of the detection job, elsewise a BadRequest is returned.</returns>
     [HttpPost("process")]
-    public async Task<IActionResult> ProcessDocumentAsync(UnprocessedDocument doc)
+    public async Task<IActionResult> ProcessDocumentAsync(UnprocessedDocument doc, string method)
     {
         HttpResponseMessage upload = UploadDocument(doc);
 
         if (!upload.IsSuccessStatusCode)
             return BadRequest(upload.Content);
 
-        HttpResponseMessage detect = StartDetection(doc);
+        HttpResponseMessage detect;
+        if (method == ProcessMethods.DETECT)
+            detect = StartDetection(doc);
+        else if (method == ProcessMethods.ANALYZE)
+            detect = StartAnalysis(doc);
+        else
+            return BadRequest($"{method} is not a recognized processing method.");
 
         if (!detect.IsSuccessStatusCode)
             return BadRequest(upload.Content);
@@ -64,10 +76,23 @@ public class DocumentController : ControllerBase
     /// <param name="jobId">The ID of a job in TextractOCR, this is used to retrieved a processed document</param>
     /// <returns>A processed document formatted in HTML</returns>
     [HttpGet("getProcessedDocument")]
-    public async Task<IActionResult> GetProcessedDocument(string jobId)
+    public async Task<IActionResult> GetProcessedDocument(string jobId, string method, string format)
     {
-        HttpResponseMessage check = CheckDetection(jobId);
-        HTMLDocument doc = new HTMLDocumentDetected();
+        HttpResponseMessage check;
+        DocumentFormatter doc;
+
+        if (method == ProcessMethods.DETECT)
+        {
+            check = CheckDetection(jobId);
+            doc = new DocumentFormatterDetected(format);
+        }
+        else if (method == ProcessMethods.ANALYZE)
+        {
+            check = CheckAnalysis(jobId);
+            doc = new DocumentFormatterAnalyzed(format);
+        }
+        else
+            return BadRequest($"{method} is not a recognized processing method.");
 
         if (!check.IsSuccessStatusCode)
             return BadRequest(check.Content);
@@ -76,7 +101,7 @@ public class DocumentController : ControllerBase
         if (blocks == null)
             return BadRequest("No blocks found");
 
-        doc.TextractToHTML(blocks);
+        doc.TextractToFormat(blocks);
 
         return Ok(doc);
     }
@@ -112,13 +137,41 @@ public class DocumentController : ControllerBase
     }
 
     /// <summary>
-    /// A helper function to check if a document has finished being processed on the TextractOCR API
+    /// A helper function to begin document analysis on the TextractOCR
+    /// </summary>
+    /// <param name="doc">The document that is to be processed</param>
+    /// <returns>The begin analysis response</returns>
+    private HttpResponseMessage StartAnalysis(UnprocessedDocument doc)
+    {
+        string request = "api/Textract/beginAnalysis?fileName=" + doc.File.FileName;
+        Task<HttpResponseMessage> detectResponse = _httpClient.GetAsync(request);
+        detectResponse.Wait();
+
+        return detectResponse.Result;
+    }
+
+    /// <summary>
+    /// A helper function to check if a document has finished being processed(detection) on the TextractOCR API
     /// </summary>
     /// <param name="jobId">The ID of the job the caller wants to check</param>
     /// <returns>The check response</returns>
     private HttpResponseMessage CheckDetection(string jobId)
     {
         string request = "api/Textract/checkDetect?jobId=" + jobId;
+        Task<HttpResponseMessage> checkResponse = _httpClient.GetAsync(request);
+        checkResponse.Wait();
+
+        return checkResponse.Result;
+    }
+
+    /// <summary>
+    /// A helper function to check if a document has finished being processed(analysis) on the TextractOCR API
+    /// </summary>
+    /// <param name="jobId">The ID of the job the caller wants to check</param>
+    /// <returns>The check response</returns>
+    private HttpResponseMessage CheckAnalysis(string jobId)
+    {
+        string request = "api/Textract/checkAnalysis?jobId=" + jobId;
         Task<HttpResponseMessage> checkResponse = _httpClient.GetAsync(request);
         checkResponse.Wait();
 
