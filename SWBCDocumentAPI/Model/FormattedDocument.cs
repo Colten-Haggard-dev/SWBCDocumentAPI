@@ -111,6 +111,11 @@ public class DocumentFormatterAnalyzed(string format) : DocumentFormatter(format
 
     protected override void ToPretty(List<Block> blocks)
     {
+        throw new NotImplementedException();
+    }
+
+    protected override void ToHTML(List<Block> blocks)
+    {
         StringBuilder builder = new();
 
         foreach (var block in blocks)
@@ -120,10 +125,5 @@ public class DocumentFormatterAnalyzed(string format) : DocumentFormatter(format
         }
 
         EncodedText = builder.ToString();
-    }
-
-    protected override void ToHTML(List<Block> blocks)
-    {
-        throw new NotImplementedException();
     }
 }

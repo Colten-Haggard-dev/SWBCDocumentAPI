@@ -36,7 +36,7 @@ public class DocumentController : ControllerBase
         _logger = logger;
         _httpClient = new()
         {
-            BaseAddress = new("https://localhost:32770/")
+            BaseAddress = new("https://localhost:7067/")
         };
     }
 
