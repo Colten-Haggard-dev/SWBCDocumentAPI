@@ -15,6 +15,11 @@ public static class TextFormats
     public const string HTML = "HTML";
 }
 
+
+/// <summary>
+/// An abstract class for different types of document formatters to inherit from.
+/// </summary>
+/// <param name="format">The format that a formatter should format a document to.</param>
 public abstract class DocumentFormatter(string format)
 {
     protected readonly string _format = format;
@@ -44,6 +49,10 @@ public abstract class DocumentFormatter(string format)
     }
 }
 
+/// <summary>
+/// Formats a document that had the detect form of extraction used on it.
+/// </summary>
+/// <param name="format">The format the detected document should be formatted to.</param>
 public class DocumentFormatterDetected(string format) : DocumentFormatter(format)
 {
     protected override void ToRaw(List<Block> blocks)
@@ -111,7 +120,14 @@ public class DocumentFormatterAnalyzed(string format) : DocumentFormatter(format
 
     protected override void ToPretty(List<Block> blocks)
     {
-        throw new NotImplementedException();
+        StringBuilder builder = new();
+
+        foreach (var block in blocks)
+        {
+            builder.AppendLine($"{block.Text}:{block.BlockType}:{block.TextType}");
+        }
+
+        EncodedText = builder.ToString();
     }
 
     protected override void ToHTML(List<Block> blocks)
@@ -120,8 +136,18 @@ public class DocumentFormatterAnalyzed(string format) : DocumentFormatter(format
 
         foreach (var block in blocks)
         {
-            builder.Append(block.BlockType);
-            builder.Append(' ');
+            if (block.BlockType == BlockType.PAGE)
+            {
+                builder.AppendLine("<div>");
+            }
+            else if (block.BlockType == BlockType.LINE)
+            {
+                builder.AppendLine($"<p>{block.Text}</p><br>");
+            }
+            else if (block.BlockType == BlockType.TABLE)
+            {
+                builder.Append($"<table></table>");
+            }
         }
 
         EncodedText = builder.ToString();

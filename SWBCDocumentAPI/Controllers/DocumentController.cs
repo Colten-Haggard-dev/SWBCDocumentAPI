@@ -46,8 +46,13 @@ public class DocumentController : ControllerBase
     /// <param name="doc">The <seealso cref="UnprocessedDocument"/> the client uploads.</param>
     /// <returns>If file upload is successful Ok is returned with the jobId of the detection job, elsewise a BadRequest is returned.</returns>
     [HttpPost("process")]
-    public async Task<IActionResult> ProcessDocumentAsync(UnprocessedDocument doc, string method)
+    public async Task<IActionResult> ProcessDocumentAsync(IFormFile file, string method)
     {
+        UnprocessedDocument doc = new()
+        {
+            Title = file.FileName,
+            File = file
+        };
         HttpResponseMessage upload = UploadDocument(doc);
 
         if (!upload.IsSuccessStatusCode)
@@ -111,7 +116,7 @@ public class DocumentController : ControllerBase
 
         doc.TextractToFormat(blocks);
 
-        return Ok(doc);
+        return Ok(doc.EncodedText);
     }
 
     /// <summary>
