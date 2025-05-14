@@ -1,3 +1,6 @@
+using SWBCDocumentAPI.Model;
+using Npgsql;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -6,6 +9,8 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+Database.Connection = new(builder.Configuration["PostgressConnectionString"]);
 
 var app = builder.Build();
 
@@ -30,3 +35,5 @@ app.UseCors(x => x
             .SetIsOriginAllowed(origin => true));// Allow any origin  
 
 app.Run();
+
+Database.Connection.Close();

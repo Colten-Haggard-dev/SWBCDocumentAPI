@@ -97,9 +97,17 @@ public class DocumentController : ControllerBase
         if (!check.IsSuccessStatusCode)
             return BadRequest(check.Content);
 
-        List<Block>? blocks = (await check.Content.ReadFromJsonAsync<GetDocumentTextDetectionResponse>())?.Blocks;
+        List<Block>? blocks;
+
+        if (method == ProcessMethods.ANALYZE)
+            blocks = (await check.Content.ReadFromJsonAsync<GetDocumentAnalysisResponse>())?.Blocks;
+        else if (method == ProcessMethods.DETECT)
+            blocks = (await check.Content.ReadFromJsonAsync<GetDocumentTextDetectionResponse>())?.Blocks;
+        else
+            return BadRequest($"{method} is not a recognized processing method.");
+
         if (blocks == null)
-            return BadRequest("No blocks found");
+            return BadRequest("No blocks found.");
 
         doc.TextractToFormat(blocks);
 
