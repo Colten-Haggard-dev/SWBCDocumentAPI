@@ -73,10 +73,7 @@ public class DocumentFormatterDetected(string format) : DocumentFormatter(format
 
         foreach (var block in blocks)
         {
-            if (block.BlockType == BlockType.LINE)
-            {
-                builder.AppendLine(block.Text);
-            }
+            builder.AppendLine($"{block.Text}:{block.BlockType}:{block.TextType}");
         }
 
         EncodedText = builder.ToString();
@@ -134,8 +131,10 @@ public class DocumentFormatterAnalyzed(string format) : DocumentFormatter(format
     {
         StringBuilder builder = new();
 
-        foreach (var block in blocks)
+        for (int i = 0; i < blocks.Count; ++i)
         {
+            Block block = blocks[i];
+            
             if (block.BlockType == BlockType.PAGE)
             {
                 builder.AppendLine("<div>");
@@ -146,9 +145,13 @@ public class DocumentFormatterAnalyzed(string format) : DocumentFormatter(format
             }
             else if (block.BlockType == BlockType.TABLE)
             {
-                builder.Append($"<table></table>");
+                builder.AppendLine("<table>");
+                builder.AppendLine($"<thead>{block.Text}</thead>");
+                builder.AppendLine("</table>");
             }
         }
+
+        builder.AppendLine("<div>");
 
         EncodedText = builder.ToString();
     }

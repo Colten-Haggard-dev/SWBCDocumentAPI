@@ -1,17 +1,6 @@
-﻿using Amazon.S3.Model;
-using Amazon.Textract.Model;
-using Amazon.Textract;
+﻿using Amazon.Textract.Model;
 using Microsoft.AspNetCore.Mvc;
-using Amazon;
-using System;
 using SWBCDocumentAPI.Model;
-using System.Net;
-using System.Threading.Tasks;
-using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
-using System.Net.Http.Json;
-using System.Text;
-using System.Diagnostics.Contracts;
 
 namespace SWBCDocumentAPI.Controllers;
 
@@ -43,16 +32,17 @@ public class DocumentController : ControllerBase
     /// <summary>
     /// Uses the "process" route as a post request to allow a client to upload an <seealso cref="UnprocessedDocument"/> and then have it processed by the OCR API.
     /// </summary>
-    /// <param name="doc">The <seealso cref="UnprocessedDocument"/> the client uploads.</param>
+    /// <param name="document">The <seealso cref="UploadedDocument"/> the client uploads.</param>
     /// <returns>If file upload is successful Ok is returned with the jobId of the detection job, elsewise a BadRequest is returned.</returns>
     [HttpPost("process")]
-    public async Task<IActionResult> ProcessDocumentAsync(IFormFile file, string method)
+    public async Task<IActionResult> ProcessDocumentAsync(UploadedDocument document)
     {
         UnprocessedDocument doc = new()
         {
-            Title = file.FileName,
-            File = file
+            Title = document.File.FileName,
+            File = document.File
         };
+        string method = document.Method;
         HttpResponseMessage upload = UploadDocument(doc);
 
         if (!upload.IsSuccessStatusCode)
